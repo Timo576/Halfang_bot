@@ -136,7 +136,7 @@ def entry_verify(mem_dc, img_dc, screenshot):
     loop_count = 0
     while not is_loading(mem_dc, img_dc, screenshot):
         if DEBUG:
-            print('Waiting for loading screen.')
+            print('Waiting for entry loading screen.')
         loop_count += 1
         time.sleep(0.1)
         if loop_count > 150:
@@ -207,20 +207,22 @@ def cast_meteor(mem_dc, img_dc, screenshot, num_cards=7):
     then enchants the meteor and casts."""
     cards = identify_cards(img_dc, mem_dc, screenshot)
     colossal_card = cards.index('Colossal')
-    colossal_location = locator_from_corner(num_cards, colossal_card)
+    meteor_card = cards.index('Meteor')
+    colossal_location = card_locator(num_cards, colossal_card)
     click(colossal_location)
     time.sleep(CARD_SELECT_TIME)
-    meteor_card = cards.index('Meteor')
-    meteor_location = locator_from_corner(num_cards, meteor_card)
+    meteor_location = card_locator(num_cards, meteor_card)
     click(meteor_location)
     time.sleep(ENCHANT_TIME)
     click(enchant_adjust(colossal_card, meteor_card,
                          num_cards))  # Move when enchant
+    if DEBUG:
+        print('Cast Meteor.')
     time.sleep(1)
     return
 
 
-def locator_from_corner(num_cards, card):
+def card_locator(num_cards, card):
     """Helper returns the location of a card from the corner."""
     return (CARD_LEFT_SIDES[num_cards][card] + int(CARD_SIZE[0] / 2),
             CARD_TOP_SIDE + int(CARD_SIZE[1] / 2))
@@ -229,8 +231,8 @@ def locator_from_corner(num_cards, card):
 def enchant_adjust(sun_spot, cast_spot, num_cards):
     """Shift of spell when enchanted."""
     if sun_spot > cast_spot:
-        return locator_from_corner(num_cards - 1, cast_spot)
-    return locator_from_corner(num_cards - 1, cast_spot - 1)
+        return card_locator(num_cards - 1, cast_spot)
+    return card_locator(num_cards - 1, cast_spot - 1)
 
 
 def identify_num_cards():
@@ -265,8 +267,10 @@ def identify_cards(img_dc, mem_dc, screenshot):
                 print(f'Meteor found at {card_spot + 1}.')
         else:
             card_area_image = bitmap_to_image(card_area)
-            card_area_image.save(f'Errors/card_fail{card_spot + 1}.png')
-            raise Exception(f'Unknown card at {card_spot + 1}.')
+            card_area_image.save(f'Errors/card_fail_at{card_spot + 1}.png')
+            cards.append('Unknown')
+            if DEBUG:
+                print(f'Unknown found at {card_spot + 1}.')
     return cards
 
 
@@ -321,11 +325,15 @@ def exit_dungeon(mem_dc, img_dc, screenshot):
     while not is_loading(mem_dc, img_dc, screenshot):
         time.sleep(0.1)
         fail_count += 1
-        if fail_count > 300:
+        if DEBUG:
+            print('Waiting for exit loading screen.')
+        if fail_count > 10:
             raise Exception("Failed to exit dungeon.")
     while is_loading(mem_dc, img_dc, screenshot):
+        if DEBUG:
+            print('Waiting for exit loading to finish.')
         time.sleep(0.1)
-    time.sleep(1)
+    time.sleep(2)
     if DEBUG:
         print('Exited dungeon.')
     return
@@ -410,8 +418,35 @@ def centroid(contour_):
     return int(moments['m10'] / moments['m00']), int(moments['m01'] / moments['m00'])
 
 
+def pass_battle():
+    """Passes the battle."""
+    click((PASS_LOCATION[0] + int((PASS_LOCATION[2] - PASS_LOCATION[0]) / 2),
+           PASS_LOCATION[1] + int((PASS_LOCATION[3] - PASS_LOCATION[1]) / 2)))
+    if DEBUG:
+        print('Passed battle.')
+    time.sleep(1)
+    return
+
+
+def spam_meteor(mem_dc, img_dc, screenshot):
+    """Kills Halfang"""
+    while not out_of_battle(img_dc, mem_dc, screenshot):
+        if choosing_phase(img_dc, mem_dc, screenshot):
+            try:
+                cast_meteor(mem_dc, img_dc, screenshot)
+            except ValueError:
+                if DEBUG:
+                    print('Meteor or colossal not found.')
+                pass_battle()
+        else:
+            time.sleep(1)
+    return
+
+
 def main():
     """Enters the dungeon, join the battle, kills Halfang, and leaves the dungeon."""
+    # TODO: fails: wrong fight spot, something loading exit, ??. Eventually selling
+    # TODO: clean/reorder
     hdesktop, desktop_dc, img_dc, mem_dc, screenshot = initialize()
     try:
         time.sleep(ALT_TAB_TIME)
@@ -420,10 +455,7 @@ def main():
             enter_dungeon()
             entry_verify(mem_dc, img_dc, screenshot)
             check_battle_joined(mem_dc, img_dc, screenshot)
-            while not out_of_battle(img_dc, mem_dc, screenshot):
-                if choosing_phase(img_dc, mem_dc, screenshot):
-                    cast_meteor(mem_dc, img_dc, screenshot)
-                time.sleep(1)
+            spam_meteor(mem_dc, img_dc, screenshot)
             exit_dungeon(mem_dc, img_dc, screenshot)
             runs += 1
     finally:
