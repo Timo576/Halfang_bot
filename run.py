@@ -447,19 +447,26 @@ def main():
     """Enters the dungeon, join the battle, kills Halfang, and leaves the dungeon."""
     # TODO: fails: wrong fight spot, something loading exit, ??. Eventually selling
     # TODO: clean/reorder
-    hdesktop, desktop_dc, img_dc, mem_dc, screenshot = initialize()
-    try:
-        time.sleep(ALT_TAB_TIME)
-        runs = 0
-        while runs < 50:
+    time.sleep(ALT_TAB_TIME)
+    runs = 0
+    while runs < 50:
+        hdesktop, desktop_dc, img_dc, mem_dc, screenshot = initialize()
+        try:
             enter_dungeon()
             entry_verify(mem_dc, img_dc, screenshot)
             check_battle_joined(mem_dc, img_dc, screenshot)
             spam_meteor(mem_dc, img_dc, screenshot)
             exit_dungeon(mem_dc, img_dc, screenshot)
             runs += 1
-    finally:
-        cleanup(mem_dc, hdesktop, desktop_dc)
+        except Exception as e:
+            # Press alt + f10 to shadow play
+            win32api.keybd_event(win32con.VK_MENU, 0, 0, 0)
+            win32api.keybd_event(win32con.VK_F10, 0, 0, 0)
+            win32api.keybd_event(win32con.VK_F10, 0, win32con.KEYEVENTF_KEYUP, 0)
+            win32api.keybd_event(win32con.VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
+            raise e
+        finally:
+            cleanup(mem_dc, hdesktop, desktop_dc)
 
 
 if __name__ == '__main__':

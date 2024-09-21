@@ -2,6 +2,12 @@
 
 from run import *
 
+# My settings
+# 1920 x 1080, fullscreen, regular UI size, high texture detail,
+# hardware cursor on
+# Bloom off, shadows off, smoothing off, jewel effects off, classic mode
+# Particles and brightness default, 2d combat display, quest helper on
+
 
 def setup_initialize():
     """Initialization for setup functions."""
